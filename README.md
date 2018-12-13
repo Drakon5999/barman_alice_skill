@@ -5,6 +5,4 @@
 
 В dumped_cocktails.json - данные коктейлей
 
-В dumped_drinks.json - информация о том, как пить напитки в чистом виде
-
 parser.py скрипт при помощи которого создавался dumped_cocktails.json 
