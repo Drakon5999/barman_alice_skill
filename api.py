@@ -1,63 +1,18 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
-# Импортируем модули для работы с JSON и логами.
-import json
 import logging
 import stringdist
-import pymorphy2
 import operator
 from collections import defaultdict
-from tmp import ALCO, DICTIONARY
 import random
-MORPH = pymorphy2.MorphAnalyzer(lang='ru')
 
+from globals import GLOBAL_DATA
+from word_normalizer import norm
 
-def norm(x):
-    p = MORPH.parse(x)
-    return list(t.normal_form for t in p)
-
-
-COCKTAILS = {}
-COCKTAILS_WORDS = defaultdict(list)
-INGREDIENTS = defaultdict(list)
 logging.basicConfig(level=logging.DEBUG)
-HELP_TEXT = 'Я умею подсказать рецепты коктейлей из списка IBA,' \
-          ' коктейль с каким-нибудь ингридиентом,' \
-          ' как правильно пить алкогольные напитки в чистом виде и значения разных терминов.'
-HELP_TEXT_FULL = 'Коктейли я могу искать по названию или его части.' \
-          '\nЕсли хотите найти коктейли с абсентом спросите "коктейль с абсентом",' \
-          ' вместо абсента можете подставить свой ингридиент.' \
-          '\nЕсли значение какого-либо термина вам не знакомо, можете спросить меня "что такое *термин*?",' \
-          ' и я постараюсь ответить' \
-          '\nТакже вы можете спросить меня о том, как пить водку, ром, джин и другие алкогольные напитки в чистом виде.'
-
-START_SUGGEST = ["Как пить Джин?", "Рецепт Кровавой Мэри", "Коктейль с абсентом", "Что такое аперитив?"]
 
 
 def handle(event, context):
-    global COCKTAILS
-    global INGREDIENTS
-    global COCKTAILS_WORDS
-
     if 'request' in event:
-        with open("dumped_cocktails.json", "r") as dc:
-            COCKTAILS = json.load(dc)
-
-        for cocktail in COCKTAILS:
-            words = cocktail.split(' ')
-            for word in words:
-                for n in norm(word.lower()):
-                    if cocktail not in COCKTAILS_WORDS[n]:
-                        COCKTAILS_WORDS[n].append(cocktail)
-        for cocktail in COCKTAILS:
-            for ingr in COCKTAILS[cocktail]["ingredients"]:
-                words = ingr.split(' ')
-                for word in words:
-                    for n in norm(word.lower()):
-                        if cocktail not in INGREDIENTS[n]:
-                            INGREDIENTS[n].append(cocktail)
-
         logging.info('Request: %r', event)
 
         response = {
@@ -79,20 +34,20 @@ def handle(event, context):
 
 def gen_text_cocktail(key):
     text = ''
-    ct = COCKTAILS[key]
+    ct = GLOBAL_DATA['COCKTAILS'][key]
     text += "{name} - {name_en}\n Категория: {category}\n".format(**ct)
     for ingr in ct['ingredients']:
         if ct['ingredients'][ingr]:
             text += "-" + ingr + ": " + ct['ingredients'][ingr] + "\n"
         else:
             text += "-" + ingr + "\n"
-    text+= "\n"
+    text += "\n"
     text += "{additional}\n\n{recept}".format(**ct)
     return text
 
 
 def gen_text_alco(key):
-    ct = ALCO[key]
+    ct = GLOBAL_DATA['ALCO'][key]
     text = ct[0] + "\n\n"
     if ct[1]:
         text += "Хорошо сочетается: " + ct[1].lower()
@@ -102,41 +57,41 @@ def gen_text_alco(key):
 # Функция для непосредственной обработки диалога.
 def handle_dialog(req, res):
     if req['session']['new']:
-
         res['response']['card'] = {
             "type": "BigImage",
             "image_id": "997614/29e868d8ba3548bc33c8",
             "title": "Здравствуйте. Чем могу быть полезен?",
-            "description": HELP_TEXT + '\n\nСоздано при поддержке barclass.ru',
+            "description": GLOBAL_DATA['HELP_TEXT'] + '\n\nСоздано при поддержке barclass.ru',
             "button": {
                 "text": "Посетить сайт",
                 "url": "http://barclass.ru",
                 "payload": {}
             }
         }
-        res['response']['text'] = HELP_TEXT
-        res['response']['buttons'] = get_suggests(START_SUGGEST)
+        res['response']['text'] = GLOBAL_DATA['HELP_TEXT']
+        res['response']['buttons'] = get_suggests(GLOBAL_DATA['START_SUGGEST'])
         return
 
     tokens = set(norm(x)[0] for x in req['request']['nlu']['tokens'])
     print(tokens)
 
     if "помощь" in tokens or ("что" in tokens and "ты" in tokens and "уметь" in tokens):
-        res['response']['text'] = HELP_TEXT_FULL
-        res['response']['buttons'] = get_suggests(START_SUGGEST)
+        res['response']['text'] = GLOBAL_DATA['HELP_TEXT_FULL']
+        res['response']['buttons'] = get_suggests(GLOBAL_DATA['START_SUGGEST'])
         return
 
-    if ("коктейль" in tokens or "рецепт" in tokens) and ("какой" in tokens and "нибыть" in tokens or "случайный" in tokens
-        or "рандомный" in tokens):
-        res['response']['text'] = gen_text_cocktail(random.choice(list(COCKTAILS.keys())))
-        res['response']['buttons'] = get_suggests(START_SUGGEST)
+    if ("коктейль" in tokens or "рецепт" in tokens) and (
+            "какой" in tokens and "нибыть" in tokens or "случайный" in tokens
+            or "рандомный" in tokens):
+        res['response']['text'] = gen_text_cocktail(random.choice(list(GLOBAL_DATA['COCKTAILS'].keys())))
+        res['response']['buttons'] = get_suggests(GLOBAL_DATA['START_SUGGEST'])
         return
 
     if "что" in tokens and "такой" in tokens:
         tokens.remove("что")
         tokens.remove("такой")
         for token in tokens:
-            for d in DICTIONARY:
+            for d in GLOBAL_DATA['DICTIONARY']:
                 for variant in d:
                     flag = False
                     if isinstance(variant, tuple):
@@ -154,25 +109,26 @@ def handle_dialog(req, res):
                         flag = True
 
                     if flag:
-                        if len(DICTIONARY[d]) == 1:
-                            res['response']['text'] = DICTIONARY[d][0]
-                            res['response']['buttons'] = get_suggests(START_SUGGEST)
-                        elif len(DICTIONARY[d]) == 2:
+                        if len(GLOBAL_DATA['DICTIONARY'][d]) == 1:
+                            res['response']['text'] = GLOBAL_DATA['DICTIONARY'][d][0]
+                            res['response']['buttons'] = get_suggests(GLOBAL_DATA['START_SUGGEST'])
+                        elif len(GLOBAL_DATA['DICTIONARY'][d]) == 2:
                             res['response']['card'] = {
-                              "type": "ItemsList",
-                              "header": {
-                                "text": DICTIONARY[d][0] if DICTIONARY[d][0] else "Это легче показать, чем описать:" ,
-                              },
-                              "items": [
-                                {
-                                  "title": "пример",
-                                  "image_id": DICTIONARY[d][1]
-                                }
-                              ]
+                                "type": "ItemsList",
+                                "header": {
+                                    "text": GLOBAL_DATA['DICTIONARY'][d][0] if GLOBAL_DATA['DICTIONARY'][d][
+                                        0] else "Это легче показать, чем описать:",
+                                },
+                                "items": [
+                                    {
+                                        "title": "пример",
+                                        "image_id": GLOBAL_DATA['DICTIONARY'][d][1]
+                                    }
+                                ]
                             }
-                            if DICTIONARY[d][0]:
-                                res['response']['text'] = DICTIONARY[d][0]
-                            res['response']['buttons'] = get_suggests(START_SUGGEST)
+                            if GLOBAL_DATA['DICTIONARY'][d][0]:
+                                res['response']['text'] = GLOBAL_DATA['DICTIONARY'][d][0]
+                            res['response']['buttons'] = get_suggests(GLOBAL_DATA['START_SUGGEST'])
                         return
 
     make_wors = {"рецепт", "коктейль", "приготовить", "сделать", "изготовить", "создать"}
@@ -194,8 +150,8 @@ def handle_dialog(req, res):
                 if "из" in tokens:
                     tokens.remove("из")
                 for token in tokens:
-                    if token in INGREDIENTS:
-                        answer += INGREDIENTS[token]
+                    if token in GLOBAL_DATA['INGREDIENTS']:
+                        answer += GLOBAL_DATA['INGREDIENTS'][token]
             if "без" in tokens:
                 pass
 
@@ -206,14 +162,14 @@ def handle_dialog(req, res):
 
         else:
             result_list = defaultdict(float)
-            for word in COCKTAILS_WORDS:
-                for unit in COCKTAILS_WORDS[word]:
+            for word in GLOBAL_DATA['COCKTAILS_WORDS']:
+                for unit in GLOBAL_DATA['COCKTAILS_WORDS'][word]:
                     for token in tokens:
                         score = stringdist.levenshtein(word, token)
                         if score < 1:
                             score = 1
                         if score <= 8:
-                            result_list[unit] += (1/score) ** 2
+                            result_list[unit] += (1 / score) ** 2
             sorted_list = sorted(result_list.items(), key=operator.itemgetter(1), reverse=True)
 
             if sorted_list and sorted_list[0][1] > 0.25:
@@ -223,7 +179,7 @@ def handle_dialog(req, res):
 
     if "пить" in tokens:
         tokens.remove("пить")
-        for alco in ALCO:
+        for alco in GLOBAL_DATA['ALCO']:
             a_norm = norm(alco)
             for a in a_norm:
                 if a in tokens:
@@ -232,14 +188,14 @@ def handle_dialog(req, res):
                     return
     else:
         result_list = defaultdict(float)
-        for word in COCKTAILS_WORDS:
-            for unit in COCKTAILS_WORDS[word]:
+        for word in GLOBAL_DATA['COCKTAILS_WORDS']:
+            for unit in GLOBAL_DATA['COCKTAILS_WORDS'][word]:
                 for token in tokens:
                     score = stringdist.levenshtein(word, token)
                     if score < 1:
                         score = 1
                     if score <= 8:
-                        result_list[unit] += (1/score) ** 2
+                        result_list[unit] += (1 / score) ** 2
         for cocktail in result_list:
             result_list[cocktail] /= len(cocktail.split(' '))
         sorted_list = sorted(result_list.items(), key=operator.itemgetter(1), reverse=True)
@@ -249,8 +205,9 @@ def handle_dialog(req, res):
             res['response']['buttons'] = get_suggests_cocktails(x[0] for x in sorted_list[1:5])
             return
 
-    res['response']['text'] = 'Ничего не нашлось, давайте попробуем что-нибудь другое! Для вызова справки скажите "помощь"'
-    res['response']['buttons'] = get_suggests(START_SUGGEST)
+    res['response'][
+        'text'] = 'Ничего не нашлось, давайте попробуем что-нибудь другое! Для вызова справки скажите "помощь"'
+    res['response']['buttons'] = get_suggests(GLOBAL_DATA['START_SUGGEST'])
 
 
 def get_suggests(names):
@@ -266,4 +223,4 @@ def get_suggests(names):
 
 
 def get_suggests_cocktails(names):
-    return get_suggests(COCKTAILS[x]['name'] for x in names)
+    return get_suggests(GLOBAL_DATA['COCKTAILS'][x]['name'] for x in names)
