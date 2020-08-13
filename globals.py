@@ -2,7 +2,7 @@
 from collections import defaultdict
 import json
 
-from tmp import ALCO, DICTIONARY
+from term_database import ALCO, DICTIONARY
 from word_normalizer import norm
 
 GLOBAL_DATA = {

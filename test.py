@@ -83,5 +83,13 @@ class TestDialog(unittest.TestCase):
         self.assertIn(GLOBAL_DATA['DICTIONARY'][("аперитив",)][0].lower(), response['response']['text'].lower())
         self.assertGreater(len(response['response']['buttons']), 0)
 
+    def test_default(self):
+        request = make_request('asdf')
+        response = defaultdict(dict)
+        handle_dialog(request, response)
+        self.assertIn("ничего не нашлось", response['response']['text'].lower())
+        self.assertGreater(len(response['response']['buttons']), 0)
+
+
 if __name__ == '__main__':
     unittest.main()
