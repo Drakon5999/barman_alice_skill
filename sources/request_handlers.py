@@ -9,6 +9,7 @@ from sources.response_utils import gen_text_alco, gen_text_cocktail, get_suggest
 from sources.word_normalizer import norm
 
 
+# приветсвтенное сообщение
 def handle_new_session(req, res, tokens):
     if req['session']['new']:
         res['response']['card'] = {
@@ -28,6 +29,7 @@ def handle_new_session(req, res, tokens):
     return False
 
 
+# запросы "что ты умеешь?", "помощь"
 def handle_help(req, res, tokens):
     if "помощь" in tokens or ("что" in tokens and "ты" in tokens and "уметь" in tokens):
         res['response']['text'] = GLOBAL_DATA['HELP_TEXT_FULL']
@@ -36,6 +38,7 @@ def handle_help(req, res, tokens):
     return False
 
 
+# запросы "случайны рецепт" и т.д.
 def handle_random_recipe(req, res, tokens):
     if ("коктейль" in tokens or "рецепт" in tokens) and (
             "какой" in tokens and "нибыть" in tokens or "случайный" in tokens
@@ -46,8 +49,10 @@ def handle_random_recipe(req, res, tokens):
     return False
 
 
+# запросы "что такое аперетив", "что такое бокал для шампанского" и т.д.
 def handle_what_is(req, res, tokens):
-    if "что" in tokens and "такой" in tokens:
+    if "что" in tokens and "такой" in tokens or \
+            "как" in tokens and "выглядеть" in tokens:
         filter(lambda t: t != "что" and t != "такой", tokens)
         for token in tokens:
             for d in GLOBAL_DATA['DICTIONARY']:
@@ -74,8 +79,8 @@ def handle_what_is(req, res, tokens):
                             res['response']['card'] = {
                                 "type": "ItemsList",
                                 "header": {
-                                    "text": GLOBAL_DATA['DICTIONARY'][d][0] if GLOBAL_DATA['DICTIONARY'][d][
-                                        0] else "Это легче показать, чем описать:",
+                                    "text": GLOBAL_DATA['DICTIONARY'][d][0] if GLOBAL_DATA['DICTIONARY'][d][0]
+                                    else "Это легче показать, чем описать:",
                                 },
                                 "items": [
                                     {

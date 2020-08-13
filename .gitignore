@@ -2,3 +2,6 @@ venv
 .idea
 dist
 dist.zip
+__pycache__
+*/__pycache__
+*.pyc

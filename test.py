@@ -90,6 +90,13 @@ class TestDialog(unittest.TestCase):
         self.assertIn("ничего не нашлось", response['response']['text'].lower())
         self.assertGreater(len(response['response']['buttons']), 0)
 
+    def test_what_is__multiword(self):
+        request = make_request('что такое бокал для шампанского')
+        response = defaultdict(dict)
+        handle_dialog(request, response)
+        self.assertIn("это легче показать, чем описать", response['response']['text'].lower())
+        self.assertGreater(len(response['response']['buttons']), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
