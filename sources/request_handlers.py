@@ -115,46 +115,45 @@ def handle_cocktail_recipe(req, res, tokens):
         for word in make_words:
             if word in tokens:
                 tokens.remove(word)
-        if "как" in tokens:
-            tokens.remove("как")
+    if "как" in tokens:
+        tokens.remove("как")
 
-        if "с" in tokens or "из" in tokens:
-            if "сок" in tokens:
-                tokens.remove("сок")
-            answer = []
-            wth = 'с'
-            if wth in tokens or "из" in tokens:
-                if wth in tokens:
-                    tokens.remove(wth)
-                if "из" in tokens:
-                    tokens.remove("из")
+    if "с" in tokens or "из" in tokens:
+        if "сок" in tokens:
+            tokens.remove("сок")
+        answer = []
+        wth = 'с'
+        if wth in tokens or "из" in tokens:
+            if wth in tokens:
+                tokens.remove(wth)
+            if "из" in tokens:
+                tokens.remove("из")
+            for token in tokens:
+                if token in GLOBAL_DATA['INGREDIENTS']:
+                    answer += GLOBAL_DATA['INGREDIENTS'][token]
+        if "без" in tokens:
+            pass
+
+        if len(answer) > 0:
+            res['response']['text'] = gen_text_cocktail(answer[0])
+            res['response']['buttons'] = get_suggests_cocktails(answer[1:5])
+            return True
+    else:
+        result_list = defaultdict(float)
+        for word in GLOBAL_DATA['COCKTAILS_WORDS']:
+            for unit in GLOBAL_DATA['COCKTAILS_WORDS'][word]:
                 for token in tokens:
-                    if token in GLOBAL_DATA['INGREDIENTS']:
-                        answer += GLOBAL_DATA['INGREDIENTS'][token]
-            if "без" in tokens:
-                pass
+                    score = stringdist.levenshtein(word, token)
+                    if score < 1:
+                        score = 1
+                    if score <= 8:
+                        result_list[unit] += (1 / score) ** 2
+        sorted_list = sorted(result_list.items(), key=operator.itemgetter(1), reverse=True)
 
-            if len(answer) > 0:
-                res['response']['text'] = gen_text_cocktail(answer[0])
-                res['response']['buttons'] = get_suggests_cocktails(answer[1:5])
-                return True
-
-        else:
-            result_list = defaultdict(float)
-            for word in GLOBAL_DATA['COCKTAILS_WORDS']:
-                for unit in GLOBAL_DATA['COCKTAILS_WORDS'][word]:
-                    for token in tokens:
-                        score = stringdist.levenshtein(word, token)
-                        if score < 1:
-                            score = 1
-                        if score <= 8:
-                            result_list[unit] += (1 / score) ** 2
-            sorted_list = sorted(result_list.items(), key=operator.itemgetter(1), reverse=True)
-
-            if sorted_list and sorted_list[0][1] > 0.25:
-                res['response']['text'] = gen_text_cocktail(sorted_list[0][0])
-                res['response']['buttons'] = get_suggests_cocktails(x[0] for x in sorted_list[1:5])
-                return True
+        if sorted_list and sorted_list[0][1] > 0.25:
+            res['response']['text'] = gen_text_cocktail(sorted_list[0][0])
+            res['response']['buttons'] = get_suggests_cocktails(x[0] for x in sorted_list[1:5])
+            return True
     return False
 
 
