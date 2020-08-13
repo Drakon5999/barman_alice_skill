@@ -1,4 +1,4 @@
-from globals import GLOBAL_DATA
+from sources.globals import GLOBAL_DATA
 
 
 def gen_text_cocktail(key):

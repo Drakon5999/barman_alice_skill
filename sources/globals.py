@@ -2,8 +2,8 @@
 from collections import defaultdict
 import json
 
-from term_database import ALCO, DICTIONARY
-from word_normalizer import norm
+from data.term_database import ALCO, DICTIONARY
+from sources.word_normalizer import norm
 
 GLOBAL_DATA = {
     'COCKTAILS': {},
@@ -25,7 +25,7 @@ GLOBAL_DATA = {
 }
 
 
-with open("dumped_cocktails.json", "r", encoding="utf8") as dc:
+with open("data/dumped_cocktails.json", "r", encoding="utf8") as dc:
     GLOBAL_DATA['COCKTAILS'] = json.load(dc)
 
 for cocktail in GLOBAL_DATA['COCKTAILS']:

@@ -2,7 +2,7 @@
 import unittest
 from collections import defaultdict
 from api import handle_dialog
-from globals import GLOBAL_DATA
+from sources.globals import GLOBAL_DATA
 
 
 def make_request(phrase, is_new=False):

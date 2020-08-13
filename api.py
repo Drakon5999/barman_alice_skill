@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
-from word_normalizer import norm
-from request_handlers import REQUEST_HANDLERS
+from sources.word_normalizer import norm
+from sources.request_handlers import REQUEST_HANDLERS
 
 logging.basicConfig(level=logging.DEBUG)
 

@@ -4,9 +4,9 @@ from collections import defaultdict
 
 import stringdist
 
-from globals import GLOBAL_DATA
-from response_utils import gen_text_alco, gen_text_cocktail, get_suggests, get_suggests_cocktails
-from word_normalizer import norm
+from sources.globals import GLOBAL_DATA
+from sources.response_utils import gen_text_alco, gen_text_cocktail, get_suggests, get_suggests_cocktails
+from sources.word_normalizer import norm
 
 
 def handle_new_session(req, res, tokens):
