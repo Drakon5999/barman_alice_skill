@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Импортирует поддержку UTF-8.
 from __future__ import unicode_literals
 
 # Импортируем модули для работы с JSON и логами.
@@ -8,9 +9,12 @@ import stringdist
 import pymorphy2
 import operator
 from collections import defaultdict
+# Импортируем подмодули Flask для запуска веб-сервиса.
+from flask import Flask, request
 from tmp import ALCO, DICTIONARY
 import random
-MORPH = pymorphy2.MorphAnalyzer(lang='ru')
+app = Flask(__name__)
+MORPH = pymorphy2.MorphAnalyzer()
 
 
 def norm(x):
@@ -35,46 +39,28 @@ HELP_TEXT_FULL = 'Коктейли я могу искать по названи�
 START_SUGGEST = ["Как пить Джин?", "Рецепт Кровавой Мэри", "Коктейль с абсентом", "Что такое аперитив?"]
 
 
-def handle(event, context):
-    global COCKTAILS
-    global INGREDIENTS
-    global COCKTAILS_WORDS
+# Задаем параметры приложения Flask.
+@app.route("/", methods=['POST'])
+def main():
+    logging.info('Request: %r', request.json)
 
-    if 'request' in event:
-        with open("dumped_cocktails.json", "r") as dc:
-            COCKTAILS = json.load(dc)
-
-        for cocktail in COCKTAILS:
-            words = cocktail.split(' ')
-            for word in words:
-                for n in norm(word.lower()):
-                    if cocktail not in COCKTAILS_WORDS[n]:
-                        COCKTAILS_WORDS[n].append(cocktail)
-        for cocktail in COCKTAILS:
-            for ingr in COCKTAILS[cocktail]["ingredients"]:
-                words = ingr.split(' ')
-                for word in words:
-                    for n in norm(word.lower()):
-                        if cocktail not in INGREDIENTS[n]:
-                            INGREDIENTS[n].append(cocktail)
-
-        logging.info('Request: %r', event)
-
-        response = {
-            "version": event['version'],
-            "session": event['session'],
-            "response": {
-                "end_session": False
-            }
+    response = {
+        "version": request.json['version'],
+        "session": request.json['session'],
+        "response": {
+            "end_session": False
         }
+    }
 
-        handle_dialog(event, response)
+    handle_dialog(request.json, response)
 
-        logging.info('Response: %r', response)
+    logging.info('Response: %r', response)
 
-        return response
-
-    return {}
+    return json.dumps(
+        response,
+        ensure_ascii=False,
+        indent=2
+    )
 
 
 def gen_text_cocktail(key):
@@ -92,6 +78,7 @@ def gen_text_cocktail(key):
 
 
 def gen_text_alco(key):
+    text = ''
     ct = ALCO[key]
     text = ct[0] + "\n\n"
     if ct[1]:
@@ -267,3 +254,24 @@ def get_suggests(names):
 
 def get_suggests_cocktails(names):
     return get_suggests(COCKTAILS[x]['name'] for x in names)
+
+
+if __name__ == "__main__":
+    with open("dumped_cocktails.json", "r") as dc:
+        COCKTAILS = json.load(dc)
+
+    for cocktail in COCKTAILS:
+        words = cocktail.split(' ')
+        for word in words:
+            for n in norm(word.lower()):
+                if cocktail not in COCKTAILS_WORDS[n]:
+                    COCKTAILS_WORDS[n].append(cocktail)
+    for cocktail in COCKTAILS:
+        for ingr in COCKTAILS[cocktail]["ingredients"]:
+            words = ingr.split(' ')
+            for word in words:
+                for n in norm(word.lower()):
+                    if cocktail not in INGREDIENTS[n]:
+                        INGREDIENTS[n].append(cocktail)
+    print(COCKTAILS_WORDS)
+    app.run(ssl_context='adhoc', host='0.0.0.0', port=80)

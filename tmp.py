@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 ALCO = {
     "виски": [
         "Комнатной температуры или со льдом в бокале tumbler; комнатной температуры в бокале dram, сопровождаемое дополнительным бокалом или графином с водой", "С водой; С содовой; С колой", ["God Father", "Irish Coffee", "Manhattan", "Dry Manhattan", "Perfect Manhattan", "Old Fashioned", "Rob Roy, Rusty Nail", "Whiskey Sour"],
